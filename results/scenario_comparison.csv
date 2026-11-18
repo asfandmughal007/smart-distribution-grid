@@ -1,0 +1,8 @@
+Scenario,Peak grid import [kW],Min voltage [pu],Max voltage [pu],Voltage violation [h],Violation bus-steps [-],Max line loading [%],Max trafo loading [%],Grid losses [kWh],Grid import [kWh],Grid export [kWh],PV curtailment [kWh],EV energy [kWh],BESS throughput [kWh],Energy cost [EUR],Total cost [EUR]
+S1 Baseline,3087,0.9329,1.0145,14.0,540,41.7,76.1,2284,57473,0,0,0,0,16070,16996
+S2 High PV,2786,0.9283,1.0129,3.5,130,36.5,65.8,1248,23231,4930,0,0,0,6283,7119
+S3 High EV (uncontr.),3989,0.9115,1.0137,15.5,712,49.4,90.1,2576,62066,0,0,4301,0,17727,18924
+S4 PV + EV,3516,0.9238,1.0137,4.75,142,43.6,79.5,1443,27619,4822,0,4301,0,7886,8941
+S5 PV + EV + BESS (rule),3127,0.9299,1.0185,3.75,90,40.0,73.1,1407,27635,4409,0,4301,640,7833,8803
+S6 Smart charging,2786,0.9283,1.0112,3.5,130,36.5,65.8,1400,27576,4822,0,4301,0,7085,7921
+S7 Smart charging + BESS,2380,0.9508,1.0107,0.0,0,32.5,58.5,1419,26915,3977,0,4301,1602,6781,7575
