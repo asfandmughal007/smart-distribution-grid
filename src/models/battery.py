@@ -59,13 +59,12 @@ class BatteryParameters:
         return self.soc_initial * self.capacity_kwh
 
     @classmethod
-    def from_config(cls, config: dict[str, Any], capacity_kwh: float | None = None) -> "BatteryParameters":
+    def from_config(cls, config: dict[str, Any], capacity_kwh: float) -> "BatteryParameters":
         """Build parameters from the ``bess`` config section (power = c_rate x capacity)."""
         cfg = config["bess"]
-        capacity = cfg["scenario_capacity_kwh"] if capacity_kwh is None else capacity_kwh
-        power = cfg["c_rate"] * capacity
+        power = cfg["c_rate"] * capacity_kwh
         return cls(
-            capacity_kwh=capacity, max_charge_kw=power, max_discharge_kw=power,
+            capacity_kwh=capacity_kwh, max_charge_kw=power, max_discharge_kw=power,
             soc_min=cfg["soc_min"], soc_max=cfg["soc_max"], soc_initial=cfg["soc_initial"],
             charge_efficiency=cfg["charge_efficiency"], discharge_efficiency=cfg["discharge_efficiency"],
             degradation_cost_eur_per_kwh=cfg["degradation_cost_eur_per_kwh"], bus=cfg["bus"],

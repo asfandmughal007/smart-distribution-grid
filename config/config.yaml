@@ -57,8 +57,8 @@ load:
                       0.97, 0.98, 0.99, 0.96, 0.90, 0.80, 0.66, 0.55, 0.48, 0.43, 0.40, 0.37]
 
 pv:
-  penetration_levels_pct: [0, 25, 50, 75, 100]  # installed kWp as % of the feeder's nominal peak load (3.715 MW)
-  scenario_penetration_pct: 100    # penetration used in the "high PV" scenarios
+  penetration_levels_pct: [0, 25, 50, 75, 100]  # installed kWp as % of the feeder nominal peak load (3.715 MW)
+  hosting_capacity_levels_pct: [0, 50, 100, 150, 200, 250, 300]  # extended sweep to locate the hosting limit
   allocation: "proportional_to_load"   # rooftop PV distributed over all load buses
   sunrise_h: 5.0                   # ASSUMPTION: mid-June, central Europe (solar time)
   sunset_h: 21.0
@@ -77,7 +77,6 @@ ev:
     low: 50
     medium: 100
     high: 150
-  scenario_level: "high"
   allocation: "residential_proportional_to_load"
   charging:
     arrival_mean_h: 18.0           # home arrival, hours after midnight
@@ -99,7 +98,6 @@ ev:
 bess:
   bus: 17                          # ASSUMPTION: end of the main feeder, weakest bus in the base case
   capacity_levels_kwh: [0, 250, 500, 1000]
-  scenario_capacity_kwh: 1000
   c_rate: 0.5                      # max charge/discharge power = c_rate * capacity
   soc_min: 0.10
   soc_max: 0.90
@@ -150,3 +148,16 @@ output:
   figures_dir: "results/figures"
   tables_dir: "results/tables"
   figure_dpi: 150
+
+# -----------------------------------------------------------------------------
+# Scenario definitions. ev_control: none | uncontrolled | optimized
+#                       bess_control: none | rule_based | optimized
+# -----------------------------------------------------------------------------
+scenarios:
+  - {name: S1_baseline,         label: "S1 Baseline",              pv_penetration_pct: 0,   ev_level: null, ev_control: none,         bess_capacity_kwh: 0,    bess_control: none}
+  - {name: S2_high_pv,          label: "S2 High PV",               pv_penetration_pct: 150, ev_level: null, ev_control: none,         bess_capacity_kwh: 0,    bess_control: none}
+  - {name: S3_high_ev,          label: "S3 High EV (uncontr.)",    pv_penetration_pct: 0,   ev_level: high, ev_control: uncontrolled, bess_capacity_kwh: 0,    bess_control: none}
+  - {name: S4_pv_ev,            label: "S4 PV + EV",               pv_penetration_pct: 150, ev_level: high, ev_control: uncontrolled, bess_capacity_kwh: 0,    bess_control: none}
+  - {name: S5_pv_ev_bess,       label: "S5 PV + EV + BESS (rule)", pv_penetration_pct: 150, ev_level: high, ev_control: uncontrolled, bess_capacity_kwh: 1000, bess_control: rule_based}
+  - {name: S6_smart_charging,   label: "S6 Smart charging",        pv_penetration_pct: 150, ev_level: high, ev_control: optimized,    bess_capacity_kwh: 0,    bess_control: none}
+  - {name: S7_smart_bess,       label: "S7 Smart charging + BESS", pv_penetration_pct: 150, ev_level: high, ev_control: optimized,    bess_capacity_kwh: 1000, bess_control: optimized}
