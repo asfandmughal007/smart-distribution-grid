@@ -72,15 +72,17 @@ def main(argv: list[str] | None = None) -> None:
         viz.plot_voltage_profile(voltage_cases, limits["v_min_pu"], figures, dpi),
     ]
 
-    experiments = {name: tables / f"experiment_{name}.csv" for name in ("pv_ev", "hosting", "bess", "ev_control", "tradeoff")}
+    experiments = {name: tables / f"experiment_{name}.csv" for name in ("pv_ev", "hosting", "bess", "ev_control", "tradeoff", "oltc")}
     available = {name: pd.read_csv(path) for name, path in experiments.items() if path.is_file()}
     if "hosting" in available:
         paths.append(viz.plot_pv_curtailment(available["hosting"], limits["v_max_pu"],
                                              limits["trafo_max_loading_pct"], figures, dpi))
     if "tradeoff" in available:
-        paths.append(viz.plot_tradeoff(available["tradeoff"], figures, dpi))
+        paths.append(viz.plot_tradeoff(available["tradeoff"], labels["S7_smart_bess"], figures, dpi))
     if "bess" in available:
-        paths.append(viz.plot_bess_sweep(available["bess"], figures, dpi))
+        ref = next(s for s in scenarios if s.name == "S7_smart_bess")
+        context = f"{ref.pv_penetration_pct:.0f} % PV, {config['ev']['levels'][ref.ev_level]} EVs"
+        paths.append(viz.plot_bess_sweep(available["bess"], context, figures, dpi))
     if "pv_ev" in available:
         paths.append(viz.plot_pv_ev_heatmap(available["pv_ev"], figures, dpi))
     missing = set(experiments) - set(available)

@@ -144,6 +144,8 @@ optimization:
 
 experiments:
   pareto_peak_charges_eur_per_kw: [0.0, 0.1, 0.3, 0.6, 1.0, 2.0, 4.0]
+  oltc_bands_pu: [[0.995, 1.015], [1.015, 1.035]]   # default deadband vs. raised setpoint (sensitivity)
+  oltc_scenarios: [S1_baseline, S4_pv_ev, S6_smart_charging, S7_smart_bess]
 
 output:
   results_dir: "results"

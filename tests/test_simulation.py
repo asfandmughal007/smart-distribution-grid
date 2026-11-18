@@ -49,3 +49,20 @@ def test_metrics_consistent_with_raw_results(baseline, config):
     assert m["v_min_pu"] == pytest.approx(np.nanmin(sim.bus_vm_pu.to_numpy()))
     assert m["trafo_loading_max_pct"] == pytest.approx(sim.trafo.loading_pct.max())
     assert m["grid_import_kwh"] == pytest.approx(sim.system.grid_import_kw.sum() * 0.25)
+
+
+def test_figures_are_written(baseline, config, tmp_path):
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from src.analysis import visualization as viz
+
+    viz.apply_style()
+    limits = config["limits"]
+    paths = [
+        viz.plot_load_profile(baseline, tmp_path, 60),
+        viz.plot_min_voltage({"S1": baseline}, limits["v_min_pu"], tmp_path, 60),
+        viz.plot_voltage_profile({"S1": baseline}, limits["v_min_pu"], tmp_path, 60),
+        viz.plot_transformer_loading({"S1": baseline}, limits["trafo_max_loading_pct"], tmp_path, 60),
+    ]
+    assert all(path.is_file() and path.stat().st_size > 10_000 for path in paths)

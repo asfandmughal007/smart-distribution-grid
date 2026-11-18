@@ -12,7 +12,7 @@ from typing import Any
 import pandas as pd
 
 from src.analysis.metrics import compute_metrics
-from src.simulation.scenarios import Scenario, ScenarioResult, run_scenario
+from src.simulation.scenarios import Scenario, ScenarioResult, get_scenario, run_scenario
 from src.utils.config import override
 
 logger = logging.getLogger(__name__)
@@ -102,4 +102,23 @@ def peak_charge_tradeoff(config: dict[str, Any], scenario: Scenario) -> pd.DataF
         # Evaluate every run with the *same* reference tariff so costs are comparable.
         row = _row({"peak_charge_eur_per_kw": rate}, result, config)
         rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def oltc_setpoint_sensitivity(config: dict[str, Any], scenario_names: list[str]) -> pd.DataFrame:
+    """Re-run scenarios with each OLTC deadband in ``experiments.oltc_bands_pu``.
+
+    Separates undervoltage caused by EV/PV operation from undervoltage caused by
+    where the substation regulator holds the MV busbar.
+    """
+    rows = []
+    for low, high in config["experiments"]["oltc_bands_pu"]:
+        cfg = override(config, {"network.transformer.oltc.vm_lower_pu": low,
+                                "network.transformer.oltc.vm_upper_pu": high})
+        for name in scenario_names:
+            result = run_scenario(cfg, get_scenario(cfg, name))
+            row = _row({"oltc_band": f"{low:.3f}-{high:.3f}", "scenario": name}, result, config)
+            row["busbar_v_min_pu"] = float(result.simulation.bus_vm_pu[0].min())
+            row["busbar_v_max_pu"] = float(result.simulation.bus_vm_pu[0].max())
+            rows.append(row)
     return pd.DataFrame(rows)

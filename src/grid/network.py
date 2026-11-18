@@ -92,7 +92,7 @@ def _add_substation(net: pp.pandapowerNet, net_cfg: dict[str, Any]) -> None:
     oltc_cfg = trafo_cfg["oltc"]
     net.ext_grid.drop(net.ext_grid.index, inplace=True)
     hv_bus = pp.create_bus(net, vn_kv=net_cfg["hv_kv"], name="HV grid", min_vm_pu=0.9, max_vm_pu=1.1)
-    pp.create_ext_grid(net, bus=hv_bus, vm_pu=net_cfg["hv_vm_pu"], name="110 kV grid")
+    pp.create_ext_grid(net, bus=hv_bus, vm_pu=net_cfg["hv_vm_pu"], name=f"{net_cfg['hv_kv']:g} kV grid")
     pp.create_transformer_from_parameters(
         net,
         hv_bus=hv_bus,

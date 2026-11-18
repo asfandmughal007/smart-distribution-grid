@@ -35,7 +35,7 @@ def apply_style() -> None:
         "font.size": 10, "axes.titlesize": 12, "axes.titleweight": "bold", "axes.labelsize": 10,
         "axes.edgecolor": INK_2, "axes.labelcolor": INK, "xtick.color": INK_2, "ytick.color": INK_2,
         "text.color": INK, "axes.spines.top": False, "axes.spines.right": False,
-        "axes.grid": True, "grid.color": GRID, "grid.linewidth": 0.8,
+        "axes.grid": True, "axes.axisbelow": True, "grid.color": GRID, "grid.linewidth": 0.8,
         "legend.frameon": False, "legend.fontsize": 9, "lines.linewidth": 1.8,
         "figure.dpi": 100,
     })
@@ -108,8 +108,9 @@ def plot_pv_profile(result: Any, out_dir: Path, dpi: int) -> Path:
 def plot_ev_profile(uncontrolled: Any, optimized: Any, out_dir: Path, dpi: int) -> Path:
     fig, ax = plt.subplots(figsize=(8, 3.8))
     idx = uncontrolled.data.timestamps
-    _series(ax, idx, uncontrolled.ev_power_kw.sum(axis=0), 1, "Uncontrolled (plug-in and charge)")
-    _series(ax, idx, optimized.ev_power_kw.sum(axis=0), 0, "Optimized (smart charging)")
+    # Same slots as S4 (uncontrolled) and S6 (optimized) in the other figures.
+    _series(ax, idx, uncontrolled.ev_power_kw.sum(axis=0), 0, "Uncontrolled (plug-in and charge)")
+    _series(ax, idx, optimized.ev_power_kw.sum(axis=0), 1, "Optimized (smart charging)")
     n = len(uncontrolled.data.fleet)
     ax.set(title=f"Aggregate EV charging power - {n} EVs", ylabel="Charging power [kW]")
     _time_axis(ax)
@@ -149,7 +150,8 @@ def plot_transformer_loading(results: dict[str, Any], limit_pct: float, out_dir:
     for slot, (label, res) in enumerate(results.items()):
         _series(ax, res.data.timestamps, res.simulation.trafo.loading_pct, slot, label)
     _limit_line(ax, limit_pct, f"Rated loading {limit_pct:.0f} %")
-    ax.set(title="HV/MV transformer loading", ylabel="Loading [% of 5 MVA]", ylim=(0, limit_pct * 1.1))
+    rating = next(iter(results.values())).data.net.trafo.sn_mva.iloc[0]
+    ax.set(title="HV/MV transformer loading", ylabel=f"Loading [% of {rating:g} MVA]", ylim=(0, limit_pct * 1.1))
     _time_axis(ax)
     _legend_below(ax)
     return _save(fig, out_dir, "06_transformer_loading.png", dpi)
@@ -296,19 +298,27 @@ def plot_voltage_profile(results: dict[str, Any], v_min: float, out_dir: Path, d
     return _save(fig, out_dir, "11_voltage_profile.png", dpi)
 
 
-def plot_tradeoff(tradeoff: pd.DataFrame, out_dir: Path, dpi: int) -> Path:
+def plot_tradeoff(tradeoff: pd.DataFrame, scenario_label: str, out_dir: Path, dpi: int) -> Path:
+    """Energy cost vs peak import for each demand-charge rate (one optimization per point)."""
     fig, ax = plt.subplots(figsize=(7.5, 4.5))
-    ax.plot(tradeoff.peak_import_kw, tradeoff.energy_cost_eur, color=SERIES[0], marker="o", markersize=7)
-    for row in tradeoff.itertuples():
-        ax.annotate(f"{row.peak_charge_eur_per_kw:.1f} EUR/kW", (row.peak_import_kw, row.energy_cost_eur),
-                    xytext=(6, 4), textcoords="offset points", fontsize=8, color=INK_2)
-    ax.set(title="Energy cost vs peak demand (S7, varying demand charge)",
+    ax.scatter(tradeoff.peak_import_kw, tradeoff.energy_cost_eur, s=55, color=SERIES[0], zorder=3,
+               edgecolor=SURFACE, linewidth=1.5)
+    # Alternate label sides along the x-axis so neighbouring points stay readable.
+    for i, row in enumerate(tradeoff.sort_values("peak_import_kw").itertuples()):
+        right = i % 2 == 0
+        ax.annotate(f"{row.peak_charge_eur_per_kw:g} EUR/kW", (row.peak_import_kw, row.energy_cost_eur),
+                    xytext=(8 if right else -8, 0), textcoords="offset points", fontsize=8, color=INK_2,
+                    ha="left" if right else "right", va="center")
+    spread = tradeoff.energy_cost_eur.max() - tradeoff.energy_cost_eur.min()
+    ax.set(title=f"Energy cost vs peak demand ({scenario_label})",
            xlabel="Peak grid import [kW]", ylabel="Energy cost excl. demand charge [EUR/day]")
+    ax.annotate(f"Labels: demand charge used in the objective. Energy cost spread: {spread:.1f} EUR/day",
+                xy=(0, -0.2), xycoords="axes fraction", fontsize=8, color=INK_2)
     return _save(fig, out_dir, "12_cost_peak_tradeoff.png", dpi)
 
 
 # --------------------------------------------------------------------------- extra experiment views
-def plot_bess_sweep(bess: pd.DataFrame, out_dir: Path, dpi: int) -> Path:
+def plot_bess_sweep(bess: pd.DataFrame, context: str, out_dir: Path, dpi: int) -> Path:
     fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
     x = bess.bess_capacity_kwh.astype(int).astype(str) + " kWh"
     for ax, key, title, fmt in [
@@ -323,7 +333,7 @@ def plot_bess_sweep(bess: pd.DataFrame, out_dir: Path, dpi: int) -> Path:
         ax.set(title=title, xlabel="BESS capacity (C/2)")
         ax.grid(axis="x", visible=False)
         ax.set_ylim(0, max(bess[key].max() * 1.18, 1))
-    fig.suptitle("Effect of BESS size (optimized EV + BESS, 150 % PV, high EV)", fontweight="bold")
+    fig.suptitle(f"Effect of BESS size (optimized EV + BESS, {context})", fontweight="bold")
     return _save(fig, out_dir, "13_bess_sweep.png", dpi)
 
 
@@ -334,7 +344,7 @@ def plot_pv_ev_heatmap(pv_ev: pd.DataFrame, out_dir: Path, dpi: int) -> Path:
     levels = list(dict.fromkeys(pv_ev.ev_level))
     fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
     for ax, key, title, fmt in [
-        (axes[0], "voltage_violation_bus_steps", "Undervoltage bus-steps (uncontrolled)", "{:.0f}"),
+        (axes[0], "voltage_violation_bus_steps", "Voltage violation bus-steps (uncontrolled)", "{:.0f}"),
         (axes[1], "peak_import_kw", "Peak grid import [kW] (uncontrolled)", "{:,.0f}"),
     ]:
         grid = pv_ev.pivot(index="ev_level", columns="pv_penetration_pct", values=key).loc[levels]

@@ -1,4 +1,4 @@
-"""Run the parameter sweeps (PV x EV, hosting capacity, BESS size, EV control, demand charge).
+"""Run the parameter sweeps (PV x EV, hosting capacity, BESS size, EV control, demand charge, OLTC setpoint).
 
 Usage:
     python scripts/run_experiments.py [--config config/config.yaml] [--only NAME ...]
@@ -20,7 +20,7 @@ from src.utils.config import PROJECT_ROOT, load_config, setup_logging
 
 logger = logging.getLogger("run_experiments")
 
-SWEEPS = ["pv_ev", "hosting", "bess", "ev_control", "tradeoff"]
+SWEEPS = ["pv_ev", "hosting", "bess", "ev_control", "tradeoff", "oltc"]
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -41,6 +41,7 @@ def main(argv: list[str] | None = None) -> None:
         "bess": lambda: experiments.bess_sweep(config, ref.pv_penetration_pct, ref.ev_level),
         "ev_control": lambda: experiments.ev_control_sweep(config, ref.pv_penetration_pct),
         "tradeoff": lambda: experiments.peak_charge_tradeoff(config, ref),
+        "oltc": lambda: experiments.oltc_setpoint_sensitivity(config, config["experiments"]["oltc_scenarios"]),
     }
     for name in SWEEPS:
         if args.only and name not in args.only:
