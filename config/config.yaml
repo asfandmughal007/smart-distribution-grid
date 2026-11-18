@@ -38,7 +38,7 @@ network:
   line_ratings:                    # ASSUMPTION: the standard case has no thermal ratings
     standard_ampacities_a: [150, 200, 300, 400]   # discrete conductor sizes
     design_utilization: 0.6        # smallest size whose base-case peak current is <= 60 % of rating
-  commercial_buses: [6, 7, 22, 23, 28, 29, 30]    # ASSUMPTION: buses with large (>=150 kW) loads treated as commercial
+  commercial_buses: [6, 7, 23, 24, 29, 30, 31]    # ASSUMPTION: buses with large (>=150 kW) loads treated as commercial
 
 limits:
   v_min_pu: 0.95                   # ASSUMPTION: +/-5 % planning band (stricter than EN 50160's +/-10 %)
