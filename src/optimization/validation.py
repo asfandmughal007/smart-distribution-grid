@@ -17,8 +17,11 @@ Architecture (the optimizer never has the final word on grid compliance):
    recomputed at the new operating point (and violated limits derated) and
    the MILP is re-solved.
 
-Residual violations that the controllable resources cannot remove (e.g.
-base-load undervoltage) are reported, never hidden.
+If the tolerance is not met within ``max_iterations`` (discrete OLTC tap
+changes can make the loop oscillate), the iteration with the best AC result
+is kept and the outcome is flagged as not converged. Residual violations that
+the controllable resources cannot remove (e.g. base-load undervoltage) are
+reported, never hidden.
 """
 
 from __future__ import annotations
@@ -48,7 +51,7 @@ class OptimizationOutcome:
     simulation: SimulationResult           # AC validation of the final schedule
     solution: OptimizationSolution         # MILP solution of the final iteration
     history: pd.DataFrame                  # one row per iteration
-    converged: bool                        # model and AC agree within tolerance
+    converged: bool                        # model and AC agree within tolerance (else best AC iteration kept)
 
 
 def build_inputs(data: Any, sensitivity: FeederSensitivity) -> OptimizationInputs:
@@ -136,7 +139,8 @@ def optimize_and_validate(data: Any) -> OptimizationOutcome:
 
     max_iter = loop_cfg["max_iterations"] if loop_cfg["enabled"] else 1
     tol = loop_cfg["voltage_tolerance_pu"]
-    history = []
+    history: list[dict[str, Any]] = []
+    candidates: list[tuple[OptimizationSolution, SimulationResult]] = []
     converged = False
     for iteration in range(1, max_iter + 1):
         solution = optimize(inp, corr, opt_cfg)
@@ -161,6 +165,7 @@ def optimize_and_validate(data: Any) -> OptimizationOutcome:
         })
         logger.info("Iteration %d: objective %.2f EUR, |V_ac - V_model| max %.4f pu, AC Vmin %.4f, trafo %.1f %%",
                     iteration, solution.objective_eur, mismatch, v_ac.min(), trafo_max)
+        candidates.append((solution, sim))
         if mismatch <= tol and not trafo_over and not line_over:
             converged = True
             break
@@ -171,11 +176,27 @@ def optimize_and_validate(data: Any) -> OptimizationOutcome:
             trafo_margin=corr.trafo_margin - step if trafo_over else corr.trafo_margin,
             line_margin=corr.line_margin - step if line_over else corr.line_margin,
         )
-    if not converged:
-        logger.warning("Iterative validation stopped after %d iterations without meeting the tolerance", max_iter)
 
+    history_df = pd.DataFrame(history)
+    if converged:
+        best = len(candidates) - 1
+    else:
+        # Discrete OLTC tap changes can make the loop oscillate around the tolerance.
+        # Keep the iteration that is best *in AC*: fewest thermal overloads, then fewest
+        # voltage violations, then lowest objective. The outcome stays flagged as not converged.
+        score = list(zip(
+            (history_df.trafo_max_pct > limits["trafo_max_loading_pct"] + 1e-6).astype(int)
+            + (history_df.line_max_pct > limits["line_max_loading_pct"] + 1e-6).astype(int),
+            history_df.ac_undervoltage_bus_steps + history_df.ac_overvoltage_bus_steps,
+            history_df.objective_eur,
+        ))
+        best = min(range(len(score)), key=score.__getitem__)
+        logger.warning("Iterative validation did not meet the tolerance in %d iterations; "
+                       "selected iteration %d (best AC result)", max_iter, best + 1)
+    history_df["selected"] = history_df.index == best
+    solution, sim = candidates[best]
     return OptimizationOutcome(
         ev_power_kw=solution.ev_power_kw, bess_schedule=solution.bess_schedule,
         pv_curtailment_kw=solution.pv_curtailment_kw, simulation=sim, solution=solution,
-        history=pd.DataFrame(history), converged=converged,
+        history=history_df, converged=converged,
     )

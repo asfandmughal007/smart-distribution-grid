@@ -13,9 +13,12 @@ import argparse
 import logging
 
 import _bootstrap  # noqa: F401
-import pandas as pd
+import matplotlib
 
-from src.analysis import visualization as viz
+matplotlib.use("Agg")  # headless rendering: figures are only written to files
+import pandas as pd  # noqa: E402
+
+from src.analysis import visualization as viz  # noqa: E402
 from src.analysis.metrics import compute_metrics, summary_table, to_markdown, write_table
 from src.simulation.scenarios import load_scenarios
 from src.utils.config import PROJECT_ROOT, load_config, setup_logging

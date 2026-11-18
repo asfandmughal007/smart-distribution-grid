@@ -13,13 +13,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import matplotlib
-
-matplotlib.use("Agg")  # headless rendering for scripts and CI
-import matplotlib.dates as mdates  # noqa: E402
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 # Categorical slots in fixed order (never cycled) + text/grid tokens.
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]

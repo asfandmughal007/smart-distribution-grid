@@ -33,6 +33,8 @@ def _row(params: dict[str, Any], result: ScenarioResult, config: dict[str, Any])
     if result.optimization is not None:
         row["opt_iterations"] = len(result.optimization.history)
         row["opt_converged"] = result.optimization.converged
+        history = result.optimization.history
+        row["opt_selected_iteration"] = int(history.loc[history.selected, "iteration"].iloc[0])
         row["objective_eur"] = result.optimization.solution.objective_eur
     return row
 
