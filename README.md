@@ -42,18 +42,18 @@ dispatch, verified by AC power flow, keeps the feeder within its voltage and the
 ```mermaid
 flowchart TB
     subgraph Inputs["config/config.yaml (single source of parameters)"]
-        P1[Load profiles<br/>residential / commercial]
-        P2[PV profile<br/>clear-sky x AR(1) clouds]
-        P3[EV fleet<br/>arrival, departure, SOC]
-        P4[ToU price]
+        P1["Load profiles<br/>residential / commercial"]
+        P2["PV profile<br/>clear-sky x AR(1) clouds"]
+        P3["EV fleet<br/>arrival, departure, SOC"]
+        P4["ToU price"]
     end
-    N[Network model<br/>IEEE 33-bus + 110/12.66 kV OLTC transformer]
-    S[Scenario framework<br/>S1-S7, sweeps]
-    U[Uncontrolled / rule-based dispatch]
-    O[Pyomo MILP - HiGHS<br/>EV, BESS, curtailment<br/>LinDistFlow + AC corrections]
-    AC[AC time-series power flow<br/>pandapower, 96 x 15 min]
-    V[Validation<br/>convergence, energy balance,<br/>EV energy, BESS SOC]
-    M[Metrics & figures<br/>voltage, loading, energy, cost]
+    N["Network model<br/>IEEE 33-bus + 110/12.66 kV OLTC transformer"]
+    S["Scenario framework<br/>S1-S7, sweeps"]
+    U["Uncontrolled / rule-based dispatch"]
+    O["Pyomo MILP - HiGHS<br/>EV, BESS, curtailment<br/>LinDistFlow + AC corrections"]
+    AC["AC time-series power flow<br/>pandapower, 96 x 15 min"]
+    V["Validation<br/>convergence, energy balance,<br/>EV energy, BESS SOC"]
+    M["Metrics & figures<br/>voltage, loading, energy, cost"]
 
     Inputs --> S
     N --> S
