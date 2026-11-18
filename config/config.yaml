@@ -128,7 +128,9 @@ optimization:
     voltage_violation: 1.0
     pv_curtailment: 1.0
     battery_degradation: 1.0
-  voltage_violation_penalty_eur_per_pu_h: 1000.0  # soft-constraint penalty (not a real cost)
+  voltage_violation_penalty_eur_per_pu_h: 10000.0  # soft-constraint penalty (not a real cost); ~10x the economic terms so voltage compliance is prioritized
+  allow_pv_curtailment: true
+  voltage_safety_margin_pu: 0.002  # optimizer targets [v_min + margin, v_max - margin]; equals the AC validation tolerance
   pv_curtailment_penalty_eur_per_kwh: 0.10        # value placed on lost renewable energy
   network_constraints:
     voltage: true                  # LinDistFlow voltage constraints
