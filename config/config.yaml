@@ -1,0 +1,152 @@
+# =============================================================================
+# Smart Distribution Grid Optimization - central configuration
+# -----------------------------------------------------------------------------
+# Every parameter used by the simulation, optimization and analysis is defined
+# here. Values marked "ASSUMPTION" are engineering assumptions made for this
+# study (not taken from a standard or measured dataset) and are documented in
+# docs/technical_report.md.
+# =============================================================================
+
+simulation:
+  # Noon-to-noon horizon so that overnight EV home-charging sessions are fully
+  # contained in one optimization window (common practice in EV scheduling
+  # studies). 96 x 15 min = 24 h.
+  start: "2025-06-16 12:00"        # ASSUMPTION: representative summer weekday
+  resolution_min: 15
+  horizon_h: 24
+  seed: 42                         # single seed for all synthetic profiles
+
+network:
+  source: "case33bw"               # pandapower implementation of Baran & Wu (1989) IEEE 33-bus feeder
+  mv_kv: 12.66                     # nominal feeder voltage (from the standard case)
+  hv_kv: 110.0                     # ASSUMPTION: upstream HV grid voltage
+  hv_vm_pu: 1.0                    # HV grid (slack) voltage setpoint
+  transformer:                     # ASSUMPTION: feeder-dedicated HV/MV transformer added to the standard case
+    sn_mva: 5.0                    # ~1.15 x the feeder's nominal peak apparent power (4.37 MVA)
+    vk_percent: 8.0
+    vkr_percent: 0.5
+    pfe_kw: 5.0
+    i0_percent: 0.1
+    shift_degree: 0.0
+    oltc:                          # on-load tap changer with automatic voltage regulation of the MV busbar
+      enabled: true
+      tap_step_percent: 1.25
+      tap_min: -9
+      tap_max: 9
+      vm_lower_pu: 0.995           # deadband of the MV busbar voltage regulator
+      vm_upper_pu: 1.015
+  line_ratings:                    # ASSUMPTION: the standard case has no thermal ratings
+    standard_ampacities_a: [150, 200, 300, 400]   # discrete conductor sizes
+    design_utilization: 0.6        # smallest size whose base-case peak current is <= 60 % of rating
+  commercial_buses: [6, 7, 22, 23, 28, 29, 30]    # ASSUMPTION: buses with large (>=150 kW) loads treated as commercial
+
+limits:
+  v_min_pu: 0.95                   # ASSUMPTION: +/-5 % planning band (stricter than EN 50160's +/-10 %)
+  v_max_pu: 1.05
+  line_max_loading_pct: 100.0
+  trafo_max_loading_pct: 100.0
+  energy_balance_tolerance_kwh: 1.0  # acceptable residual of the energy-balance check
+
+load:
+  noise_std: 0.02                  # relative std of seeded noise added to the normalized shapes
+  # Hourly normalized shapes (index 0 = 00:00). Synthetic, shaped after typical
+  # European residential (evening peak) and commercial (office-hours) demand.
+  residential_shape: [0.42, 0.36, 0.33, 0.32, 0.33, 0.38, 0.52, 0.66, 0.68, 0.62, 0.58, 0.58,
+                      0.60, 0.58, 0.55, 0.56, 0.62, 0.74, 0.88, 0.97, 1.00, 0.92, 0.75, 0.56]
+  commercial_shape:  [0.35, 0.33, 0.32, 0.32, 0.33, 0.38, 0.50, 0.70, 0.88, 0.96, 1.00, 1.00,
+                      0.97, 0.98, 0.99, 0.96, 0.90, 0.80, 0.66, 0.55, 0.48, 0.43, 0.40, 0.37]
+
+pv:
+  penetration_levels_pct: [0, 25, 50, 75, 100]  # installed kWp as % of the feeder's nominal peak load (3.715 MW)
+  scenario_penetration_pct: 100    # penetration used in the "high PV" scenarios
+  allocation: "proportional_to_load"   # rooftop PV distributed over all load buses
+  sunrise_h: 5.0                   # ASSUMPTION: mid-June, central Europe (solar time)
+  sunset_h: 21.0
+  shape_exponent: 1.2              # sharpens the sine-shaped clear-sky curve
+  performance_ratio: 0.80          # inverter, temperature, soiling, wiring losses
+  seasonal_factor: 1.0             # 1.0 = summer clear-sky peak; e.g. 0.35 for winter
+  cloud:
+    mean_clearness: 0.92           # mean clear-sky index of the day
+    variability: 0.08              # std of the AR(1) cloud process
+    autocorrelation: 0.85          # AR(1) coefficient between 15-min steps
+    min_clearness: 0.30
+  power_factor: 1.0                # inverters operate at unity power factor
+
+ev:
+  levels:                          # number of EVs per penetration level (ASSUMPTION, see report)
+    low: 50
+    medium: 100
+    high: 150
+  scenario_level: "high"
+  allocation: "residential_proportional_to_load"
+  charging:
+    arrival_mean_h: 18.0           # home arrival, hours after midnight
+    arrival_std_h: 1.5
+    arrival_min_h: 15.0
+    arrival_max_h: 23.0
+    departure_mean_h: 7.0          # next-morning departure
+    departure_std_h: 0.75
+    departure_min_h: 5.0
+    departure_max_h: 10.0
+    battery_capacity_kwh: [40.0, 60.0, 77.0]    # sampled uniformly
+    initial_soc_min: 0.20
+    initial_soc_max: 0.50
+    target_soc: 0.80               # required SOC at departure
+    max_power_kw: [7.4, 11.0]      # typical German wallbox ratings (single-/three-phase)
+    efficiency: 0.92               # grid-to-battery charging efficiency
+    power_factor: 1.0
+
+bess:
+  bus: 17                          # ASSUMPTION: end of the main feeder, weakest bus in the base case
+  capacity_levels_kwh: [0, 250, 500, 1000]
+  scenario_capacity_kwh: 1000
+  c_rate: 0.5                      # max charge/discharge power = c_rate * capacity
+  soc_min: 0.10
+  soc_max: 0.90
+  soc_initial: 0.50
+  charge_efficiency: 0.95
+  discharge_efficiency: 0.95
+  degradation_cost_eur_per_kwh: 0.05   # ASSUMPTION: per kWh of throughput (charge + discharge)/2
+  rule_based:                      # heuristic used when the BESS is NOT optimized (Scenario 5)
+    charge_below_mw: 1.5           # charge when feeder net demand falls below this value
+    discharge_above_mw: 3.0        # discharge when feeder net demand exceeds this value
+
+price:
+  # Synthetic time-of-use tariff used for simulation only. It does NOT represent
+  # a specific German tariff. Hourly values in EUR/kWh, index 0 = 00:00.
+  import_eur_per_kwh: [0.20, 0.19, 0.18, 0.18, 0.18, 0.20, 0.26, 0.32, 0.33, 0.30, 0.26, 0.23,
+                       0.21, 0.21, 0.22, 0.24, 0.28, 0.34, 0.40, 0.42, 0.40, 0.34, 0.28, 0.23]
+  export_eur_per_kwh: 0.08         # ASSUMPTION: flat feed-in remuneration
+  peak_demand_charge_eur_per_kw: 0.30  # ASSUMPTION: daily share of ~110 EUR/kW/a demand charge
+
+optimization:
+  solver: "appsi_highs"            # Pyomo interface to HiGHS; fallback: "cbc"
+  fallback_solver: "cbc"
+  mip_gap: 0.001
+  time_limit_s: 300
+  weights:                         # multipliers on each objective term (1.0 = term in EUR)
+    energy_cost: 1.0
+    peak_demand: 1.0
+    voltage_violation: 1.0
+    pv_curtailment: 1.0
+    battery_degradation: 1.0
+  voltage_violation_penalty_eur_per_pu_h: 1000.0  # soft-constraint penalty (not a real cost)
+  pv_curtailment_penalty_eur_per_kwh: 0.10        # value placed on lost renewable energy
+  network_constraints:
+    voltage: true                  # LinDistFlow voltage constraints
+    transformer: true
+    lines: true
+  iterative_validation:
+    enabled: true
+    max_iterations: 5
+    voltage_tolerance_pu: 0.002    # allowed AC-vs-model voltage error before re-optimizing
+    loading_margin_step: 0.02      # capacity derating applied after an AC overload
+
+experiments:
+  pareto_peak_charges_eur_per_kw: [0.0, 0.1, 0.3, 0.6, 1.0, 2.0, 4.0]
+
+output:
+  results_dir: "results"
+  figures_dir: "results/figures"
+  tables_dir: "results/tables"
+  figure_dpi: 150

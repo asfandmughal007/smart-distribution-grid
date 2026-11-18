@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smart-distribution-grid"
+version = "1.0.0"
+description = "Time-series AC power-flow simulation and Pyomo optimization of PV, EV charging and battery storage on the IEEE 33-bus distribution feeder."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Asfand Mughal" }]
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "matplotlib>=3.8",
+    "pyyaml>=6.0",
+    "pandapower>=3.0",
+    "pyomo>=6.7",
+    "highspy>=1.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "jupyter", "numba"]
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::FutureWarning",
+]
